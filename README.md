@@ -15,7 +15,7 @@ posición del servo motor se defina el color del del RGB estará encendido.
 - 1 servo motor
 - 1 LED RGB (o 3 LEDs, uno rojo, uno verde y uno azul)
 - Puntas de osciloscopio
-#Parte A: Controlador LED RGB (40pts) – Entregable en Clase
+# Parte A: Controlador LED RGB (40pts) – Entregable en Clase
 Diseñe e implemente tres señales PWM para controlar un LED RGB o en su
 defecto 3 leds de color Rojo, Verde y Azul utilizando dos botones.
 El primer botón (B3) nos servirá para seleccionar cuál de los tres colores
