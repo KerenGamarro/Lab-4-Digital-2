@@ -1,0 +1,66 @@
+// Keren Gamarro - Control de Servo con PWM manual (sin librería)
+// Servo en pin 27, botones en 26 (izquierda) y 25 (derecha) solo servo
+
+#include <Arduino.h>
+
+// Pines
+#define SERVO_PIN 27
+#define BOTON_IZQUIERDA 26
+#define BOTON_DERECHA 25
+
+// Canal y resolución PWM
+#define SERVO_CANAL 3
+#define FRECUENCIA 50         // Frecuencia típica de servo: 50 Hz (20 ms)
+#define RESOLUCION 10         // 10 bits = 0–1023
+
+// Duty cycles calculados para 0.5 ms, 1 ms, ..., 2.5 ms (en 20 ms de periodo)
+const int posiciones[5] = {26, 51, 77, 102, 128}; // Equivale a 0°, 45°, 90°, 135°, 180°
+int posicionActual = 2; // Comienza en el centro (90°)
+
+// Antirrebote
+unsigned long ultimaLecturaIzquierda = 0;
+unsigned long ultimaLecturaDerecha = 0;
+const unsigned long debounceDelay = 200;
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Configurar PWM para el servo
+  ledcSetup(SERVO_CANAL, FRECUENCIA, RESOLUCION);
+  ledcAttachPin(SERVO_PIN, SERVO_CANAL);
+  ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+
+  // Configurar botones
+  pinMode(BOTON_IZQUIERDA, INPUT_PULLUP); // Conectado a GND
+  pinMode(BOTON_DERECHA, INPUT_PULLUP);
+
+  Serial.println("Control de servo listo");
+}
+
+void loop() {
+  unsigned long ahora = millis();
+
+  // Botón izquierda
+  if (digitalRead(BOTON_IZQUIERDA) == LOW && ahora - ultimaLecturaIzquierda > debounceDelay) {
+    if (posicionActual > 0) {
+      posicionActual--;
+      Serial.print("Izquierda → Posición: ");
+      Serial.println(posicionActual);
+      ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+    }
+    ultimaLecturaIzquierda = ahora;
+  }
+
+  // Botón derecha
+  if (digitalRead(BOTON_DERECHA) == LOW && ahora - ultimaLecturaDerecha > debounceDelay) {
+    if (posicionActual < 4) {
+      posicionActual++;
+      Serial.print("Derecha → Posición: ");
+      Serial.println(posicionActual);
+      ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+    }
+    ultimaLecturaDerecha = ahora;
+  }
+
+  delay(10); // Pequeño retardo para evitar lectura múltiple muy rápida
+}
