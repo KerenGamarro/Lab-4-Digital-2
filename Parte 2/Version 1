@@ -1,0 +1,113 @@
+#include <Arduino.h> //Errores el pin azul ya no funciona y el servo no tiene las posiciones que necesito
+
+
+// Pines de LEDs RGB
+#define LED_R 15
+#define LED_G 4
+#define LED_B 18
+
+// Pines de botones para LEDs
+#define BOTON_COLOR 33
+#define BOTON_BRILLO 32
+
+// Pines de botones para el servo
+#define BOTON_IZQ 26
+#define BOTON_DER 25
+
+// Pin del servomotor
+#define SERVO_PIN 27
+
+// PWM: canales para cada LED y el servo
+#define CH_R 0
+#define CH_G 1
+#define CH_B 2
+#define CH_SERVO 3
+
+// Constantes de PWM
+#define FREQ_LED 5000
+#define FREQ_SERVO 50
+#define RES_LED 8
+#define RES_SERVO 16
+
+// Variables para LED RGB
+int colorSeleccionado = 0; // 0 = R, 1 = G, 2 = B
+int nivelesBrillo[3] = {0, 0, 0}; // nivel actual de brillo para R, G, B
+const int nivelesPWM[4] = {0, 85, 170, 255}; // 4 niveles de brillo
+
+// Variables para el servo
+int posicion = 2; // rango 0 a 4 (0°, 45°, 90°, 135°, 180°)
+const int posicionesServo[5] = {1638, 3276, 4915, 6553, 8191}; // duty para 50Hz
+
+// Variables para control de rebote
+unsigned long ultimoCambioColor = 0;
+unsigned long ultimoCambioBrillo = 0;
+unsigned long ultimoCambioServo = 0;
+const unsigned long rebote = 200;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configuración botones (pullup)
+  pinMode(BOTON_COLOR, INPUT_PULLUP);
+  pinMode(BOTON_BRILLO, INPUT_PULLUP);
+  pinMode(BOTON_IZQ, INPUT_PULLUP);
+  pinMode(BOTON_DER, INPUT_PULLUP);
+
+  // PWM para LEDs
+  ledcSetup(CH_R, FREQ_LED, RES_LED);
+  ledcAttachPin(LED_R, CH_R);
+
+  ledcSetup(CH_G, FREQ_LED, RES_LED);
+  ledcAttachPin(LED_G, CH_G);
+
+  ledcSetup(CH_B, FREQ_LED, RES_LED);
+  ledcAttachPin(LED_B, CH_B);
+
+  // PWM para servo
+  ledcSetup(CH_SERVO, FREQ_SERVO, RES_SERVO);
+  ledcAttachPin(SERVO_PIN, CH_SERVO);
+  ledcWrite(CH_SERVO, posicionesServo[posicion]);
+}
+
+void loop() {
+  unsigned long ahora = millis();
+
+  // Botón B3 - cambiar color seleccionado
+  if (digitalRead(BOTON_COLOR) == LOW && ahora - ultimoCambioColor > rebote) {
+    colorSeleccionado = (colorSeleccionado + 1) % 3;
+    Serial.print("Color seleccionado: ");
+    Serial.println(colorSeleccionado == 0 ? "Rojo" : colorSeleccionado == 1 ? "Verde" : "Azul");
+    ultimoCambioColor = ahora;
+  }
+
+  // Botón B4 - cambiar brillo
+  if (digitalRead(BOTON_BRILLO) == LOW && ahora - ultimoCambioBrillo > rebote) {
+    nivelesBrillo[colorSeleccionado] = (nivelesBrillo[colorSeleccionado] + 1) % 4;
+    ledcWrite(CH_R, nivelesPWM[nivelesBrillo[0]]);
+    ledcWrite(CH_G, nivelesPWM[nivelesBrillo[1]]);
+    ledcWrite(CH_B, nivelesPWM[nivelesBrillo[2]]);
+    ultimoCambioBrillo = ahora;
+  }
+
+  // Botón B1 - mover servo izquierda
+  if (digitalRead(BOTON_IZQ) == LOW && ahora - ultimoCambioServo > rebote) {
+    if (posicion > 0) {
+      posicion--;
+      ledcWrite(CH_SERVO, posicionesServo[posicion]);
+      Serial.print("Servo izquierda: posición ");
+      Serial.println(posicion);
+    }
+    ultimoCambioServo = ahora;
+  }
+
+  // Botón B2 - mover servo derecha
+  if (digitalRead(BOTON_DER) == LOW && ahora - ultimoCambioServo > rebote) {
+    if (posicion < 4) {
+      posicion++;
+      ledcWrite(CH_SERVO, posicionesServo[posicion]);
+      Serial.print("Servo derecha: posición ");
+      Serial.println(posicion);
+    }
+    ultimoCambioServo = ahora;
+  }
+}
