@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-// ======================= LED RGB ==========================
+// El led RGB se reemplazo por 3 leds comunes
 #define LED_ROJO 15
 #define LED_VERDE 4
 #define LED_AZUL 18
@@ -20,16 +20,16 @@ unsigned long tiempoUltimoB3 = 0;
 unsigned long tiempoUltimoB4 = 0;
 const unsigned long debounceDelay = 200;
 
-// ======================== SERVO ===========================
+// Se conecta el pin del servo y los botones que lo controlan 
 #define SERVO_PIN 27
 #define BOTON_IZQUIERDA 26
 #define BOTON_DERECHA 25
 
 #define SERVO_CANAL 3
-#define SERVO_FRECUENCIA 50  // 50 Hz
-#define SERVO_RESOLUCION 10  // 10 bits (0-1023)
+#define SERVO_FRECUENCIA 50  // 50 Hz a diferencia de los leds esta es la frecuencia que se debe de poner
+#define SERVO_RESOLUCION 10  // 10 bits (0-1023) // para un movimiento claro se usaron 10 bits
 
-const int posiciones[5] = {26, 51, 77, 102, 128}; // Duty 0.5ms–2.5ms
+const int posiciones[5] = {26, 51, 77, 102, 128}; // Duty 0.5ms–2.5ms como se ve en la imagen
 int posicionActual = 2; // Comienza en el centro (90°)
 
 unsigned long ultimaLecturaIzquierda = 0;
