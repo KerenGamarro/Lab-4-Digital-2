@@ -1,0 +1,140 @@
+// Keren Gamarro - Universidad del Valle de Guatemala
+// Control de LEDs RGB con 3 estados de color + 4to estado que habilita servo
+// En modo servo, si está en extremos se apagan los LEDs
+
+#include <Arduino.h>
+
+// LEDs
+#define LED_ROJO 15
+#define LED_VERDE 4
+#define LED_AZUL 18
+
+// Botones
+#define BOTON_B3 33  // Cambia estado (0–3)
+#define BOTON_B4 32  // Cambia brillo
+#define BOTON_IZQUIERDA 26
+#define BOTON_DERECHA 25
+
+// Servo
+#define SERVO_PIN 27
+#define SERVO_CANAL 3
+#define SERVO_FRECUENCIA 50
+#define SERVO_RESOLUCION 10
+const int posiciones[5] = {26, 51, 77, 102, 128};
+int posicionActual = 2; // Centro
+
+// Variables LEDs
+int estadoB3 = 0; // 0=Rojo, 1=Verde, 2=Azul, 3=Servo
+int nivelesBrillo[3] = {0, 0, 0};  // Nivel 0–3 por color
+const int nivelesPWM[4] = {0, 85, 170, 255};
+const int porcentajeBrillo[4] = {0, 33, 66, 100};
+
+// Tiempos para antirrebote
+unsigned long tiempoUltimoB3 = 0;
+unsigned long tiempoUltimoB4 = 0;
+unsigned long ultimaLecturaIzquierda = 0;
+unsigned long ultimaLecturaDerecha = 0;
+const unsigned long debounceDelay = 200;
+
+void aplicarColorActual() {
+  // Aplica el color según estadoB3 (0–2) o deja el último brillo en modo servo
+  if (estadoB3 < 3) {
+    ledcWrite(0, (estadoB3 == 0) ? nivelesPWM[nivelesBrillo[0]] : 0);
+    ledcWrite(1, (estadoB3 == 1) ? nivelesPWM[nivelesBrillo[1]] : 0);
+    ledcWrite(2, (estadoB3 == 2) ? nivelesPWM[nivelesBrillo[2]] : 0);
+  } else {
+    // Modo servo: si está en extremos, apagar
+    if (posicionActual == 0 || posicionActual == 4) {
+      ledcWrite(0, 0);
+      ledcWrite(1, 0);
+      ledcWrite(2, 0);
+    }
+  }
+}
+
+void imprimirEstado() {
+  const char* estados[4] = {"Rojo", "Verde", "Azul", "Servo"};
+  Serial.print("Estado B3: ");
+  Serial.print(estados[estadoB3]);
+  if (estadoB3 < 3) {
+    Serial.print(" | Brillo: ");
+    Serial.print(porcentajeBrillo[nivelesBrillo[estadoB3]]);
+    Serial.println("%");
+  } else {
+    Serial.print(" | Posición Servo: ");
+    Serial.println(posicionActual);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configuración PWM LEDs
+  ledcAttachPin(LED_ROJO, 0);
+  ledcAttachPin(LED_VERDE, 1);
+  ledcAttachPin(LED_AZUL, 2);
+  ledcSetup(0, 5000, 8);
+  ledcSetup(1, 5000, 8);
+  ledcSetup(2, 5000, 8);
+
+  // Configuración Servo
+  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION);
+  ledcAttachPin(SERVO_PIN, SERVO_CANAL);
+  ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+
+  // Botones
+  pinMode(BOTON_B3, INPUT_PULLUP);
+  pinMode(BOTON_B4, INPUT_PULLUP);
+  pinMode(BOTON_IZQUIERDA, INPUT_PULLUP);
+  pinMode(BOTON_DERECHA, INPUT_PULLUP);
+
+  aplicarColorActual();
+  imprimirEstado();
+}
+
+void loop() {
+  unsigned long ahora = millis();
+
+  // ---- Botón B3: cambiar estado (0→1→2→3→0) ----
+  if (digitalRead(BOTON_B3) == LOW && ahora - tiempoUltimoB3 > debounceDelay) {
+    estadoB3 = (estadoB3 + 1) % 4;
+    aplicarColorActual();
+    imprimirEstado();
+    tiempoUltimoB3 = ahora;
+  }
+
+  // ---- Botón B4: cambiar brillo (solo en 0–2) ----
+  if (estadoB3 < 3 && digitalRead(BOTON_B4) == LOW && ahora - tiempoUltimoB4 > debounceDelay) {
+    nivelesBrillo[estadoB3] = (nivelesBrillo[estadoB3] + 1) % 4;
+    aplicarColorActual();
+    imprimirEstado();
+    tiempoUltimoB4 = ahora;
+  }
+
+  // ---- Control Servo (solo en estado 3) ----
+  if (estadoB3 == 3) {
+    if (digitalRead(BOTON_IZQUIERDA) == LOW && ahora - ultimaLecturaIzquierda > debounceDelay) {
+      if (posicionActual > 0) {
+        posicionActual--;
+        Serial.print("Servo Izquierda → Posición: ");
+        Serial.println(posicionActual);
+        ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+        aplicarColorActual();
+      }
+      ultimaLecturaIzquierda = ahora;
+    }
+
+    if (digitalRead(BOTON_DERECHA) == LOW && ahora - ultimaLecturaDerecha > debounceDelay) {
+      if (posicionActual < 4) {
+        posicionActual++;
+        Serial.print("Servo Derecha → Posición: ");
+        Serial.println(posicionActual);
+        ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+        aplicarColorActual();
+      }
+      ultimaLecturaDerecha = ahora;
+    }
+  }
+
+  delay(10);
+}
