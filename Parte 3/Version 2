@@ -16,11 +16,11 @@
 #define BOTON_IZQUIERDA 26
 #define BOTON_DERECHA 25
 
-#define SERVO_CANAL 3
+#define SERVO_CANAL 3 //frecuencia para el servo distinta de la de los leds
 #define SERVO_FRECUENCIA 50
 #define SERVO_RESOLUCION 10
 
-const int posiciones[5] = {26, 51, 77, 102, 128}; 
+const int posiciones[5] = {26, 51, 77, 102, 128}; //posiciones para el servo
 int posicionActual = 2;
 
 unsigned long ultimaLecturaIzquierda = 0;
@@ -32,13 +32,13 @@ const unsigned long debounceDelay = 200;
 // Estados
 int colorSeleccionado = 0;  // 0=Rojo, 1=Verde, 2=Azul, 3=Servo
 int nivelesBrillo[3] = {0, 0, 0};
-int nivelesPrevios[3] = {0, 0, 0}; // Asi si el servo sale de los extremos los leds vuelven al estado en que los deje
+int nivelesPrevios[3] = {0, 0, 0}; // Para restaurar al salir del extremo
 const int nivelesPWM[4] = {0, 85, 170, 255};
 const int porcentajeBrillo[4] = {0, 33, 66, 100};
 
 bool enExtremo = false;
 
-void imprimirEstadoLED() { //para ver si funcionaba todo
+void imprimirEstadoLED() {
   if (colorSeleccionado < 3) {
     const char* colores[3] = {"Rojo", "Verde", "Azul"};
     Serial.print("Color seleccionado: ");
@@ -61,21 +61,21 @@ void setup() {
   Serial.begin(115200);
 
   // PWM LEDs
-  ledcAttachPin(LED_ROJO, 0);
+  ledcAttachPin(LED_ROJO, 0); //agrego canales y frecuencia
   ledcAttachPin(LED_VERDE, 1);
   ledcAttachPin(LED_AZUL, 2);
   ledcSetup(0, 5000, 8);
   ledcSetup(1, 5000, 8);
   ledcSetup(2, 5000, 8);
 
-  // PWM Servo, se tiene que hacer su propio canal
-  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION);
+  // PWM Servo
+  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION); //agrego canal para el servo
   ledcAttachPin(SERVO_PIN, SERVO_CANAL);
   ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
 
   // Botones
   pinMode(BOTON_B3, INPUT_PULLUP);
-  pinMode(BOTON_B4, INPUT_PULLUP);
+  pinMode(BOTON_B4, INPUT_PULLUP); //conectados a tierra
   pinMode(BOTON_IZQUIERDA, INPUT_PULLUP);
   pinMode(BOTON_DERECHA, INPUT_PULLUP);
 
