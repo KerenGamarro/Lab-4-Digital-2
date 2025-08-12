@@ -54,7 +54,7 @@ void aplicarBrillos() {
   ledcWrite(2, nivelesPWM[nivelesBrillo[2]]);
 }
 
-void mostrarPatronServo() {
+void mostrarPatronServo() { //casos para el semaforo
   // Apagar todos por defecto
   int tempBrillo[3] = {0, 0, 0};
 
@@ -73,7 +73,7 @@ void mostrarPatronServo() {
       break;
   }
 
-  ledcWrite(0, nivelesPWM[tempBrillo[0]]);
+  ledcWrite(0, nivelesPWM[tempBrillo[0]]); //canales para el led
   ledcWrite(1, nivelesPWM[tempBrillo[1]]);
   ledcWrite(2, nivelesPWM[tempBrillo[2]]);
 }
@@ -90,12 +90,12 @@ void setup() {
   ledcSetup(2, 5000, 8);
 
   // PWM Servo
-  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION);
+  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION); //agrego canal para el servo
   ledcAttachPin(SERVO_PIN, SERVO_CANAL);
   ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
 
   // Botones
-  pinMode(BOTON_B3, INPUT_PULLUP);
+  pinMode(BOTON_B3, INPUT_PULLUP); //todos a tierra 
   pinMode(BOTON_B4, INPUT_PULLUP);
   pinMode(BOTON_IZQUIERDA, INPUT_PULLUP);
   pinMode(BOTON_DERECHA, INPUT_PULLUP);
