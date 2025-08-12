@@ -1,0 +1,152 @@
+// Keren Gamarro - Universidad del Valle de Guatemala
+// Control combinado de 3 LEDs RGB (PWM) y servomotor con botones (PWM sin librería)
+
+#include <Arduino.h>
+
+// LEDs
+#define LED_ROJO 15
+#define LED_VERDE 4
+#define LED_AZUL 18
+
+#define BOTON_B3 33  // Selección de color / Modo
+#define BOTON_B4 32  // Cambio de brillo
+
+// Servo
+#define SERVO_PIN 27
+#define BOTON_IZQUIERDA 26
+#define BOTON_DERECHA 25
+
+#define SERVO_CANAL 3
+#define SERVO_FRECUENCIA 50
+#define SERVO_RESOLUCION 10
+
+const int posiciones[5] = {26, 51, 77, 102, 128}; // posiciones servo
+int posicionActual = 2;
+
+unsigned long ultimaLecturaIzquierda = 0;
+unsigned long ultimaLecturaDerecha = 0;
+unsigned long tiempoUltimoB3 = 0;
+unsigned long tiempoUltimoB4 = 0;
+const unsigned long debounceDelay = 200;
+
+// Estados
+int colorSeleccionado = 0;  // 0=Rojo, 1=Verde, 2=Azul, 3=Servo
+int nivelesBrillo[3] = {0, 0, 0}; // índice de intensidad para cada color
+const int nivelesPWM[4] = {0, 85, 170, 255};
+const int porcentajeBrillo[4] = {0, 33, 66, 100};
+
+void imprimirEstadoLED() {
+  if (colorSeleccionado < 3) {
+    const char* colores[3] = {"Rojo", "Verde", "Azul"};
+    Serial.print("Color seleccionado: ");
+    Serial.print(colores[colorSeleccionado]);
+    Serial.print(" | Brillo: ");
+    Serial.print(porcentajeBrillo[nivelesBrillo[colorSeleccionado]]);
+    Serial.println("%");
+  } else {
+    Serial.println("Modo: Servo");
+  }
+}
+
+void aplicarBrillos() {
+  ledcWrite(0, nivelesPWM[nivelesBrillo[0]]);
+  ledcWrite(1, nivelesPWM[nivelesBrillo[1]]);
+  ledcWrite(2, nivelesPWM[nivelesBrillo[2]]);
+}
+
+void mostrarPatronServo() {
+  // Apagar todos por defecto
+  int tempBrillo[3] = {0, 0, 0};
+
+  switch (posicionActual) {
+    case 1: // LED rojo
+      tempBrillo[0] = nivelesBrillo[0];
+      break;
+    case 2: // LED verde
+      tempBrillo[1] = nivelesBrillo[1];
+      break;
+    case 3: // LED azul
+      tempBrillo[2] = nivelesBrillo[2];
+      break;
+    default:
+      // extremos → todos apagados
+      break;
+  }
+
+  ledcWrite(0, nivelesPWM[tempBrillo[0]]);
+  ledcWrite(1, nivelesPWM[tempBrillo[1]]);
+  ledcWrite(2, nivelesPWM[tempBrillo[2]]);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // PWM LEDs
+  ledcAttachPin(LED_ROJO, 0);
+  ledcAttachPin(LED_VERDE, 1);
+  ledcAttachPin(LED_AZUL, 2);
+  ledcSetup(0, 5000, 8);
+  ledcSetup(1, 5000, 8);
+  ledcSetup(2, 5000, 8);
+
+  // PWM Servo
+  ledcSetup(SERVO_CANAL, SERVO_FRECUENCIA, SERVO_RESOLUCION);
+  ledcAttachPin(SERVO_PIN, SERVO_CANAL);
+  ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+
+  // Botones
+  pinMode(BOTON_B3, INPUT_PULLUP);
+  pinMode(BOTON_B4, INPUT_PULLUP);
+  pinMode(BOTON_IZQUIERDA, INPUT_PULLUP);
+  pinMode(BOTON_DERECHA, INPUT_PULLUP);
+
+  aplicarBrillos();
+  imprimirEstadoLED();
+}
+
+void loop() {
+  unsigned long ahora = millis();
+
+  // Cambio de modo
+  if (digitalRead(BOTON_B3) == LOW && ahora - tiempoUltimoB3 > debounceDelay) {
+    colorSeleccionado = (colorSeleccionado + 1) % 4;
+    imprimirEstadoLED();
+    tiempoUltimoB3 = ahora;
+  }
+
+  // Cambio de brillo
+  if (colorSeleccionado < 3 && digitalRead(BOTON_B4) == LOW && ahora - tiempoUltimoB4 > debounceDelay) {
+    nivelesBrillo[colorSeleccionado] = (nivelesBrillo[colorSeleccionado] + 1) % 4;
+    imprimirEstadoLED();
+    tiempoUltimoB4 = ahora;
+  }
+
+  // Modo servo
+  if (colorSeleccionado == 3) {
+    if (digitalRead(BOTON_IZQUIERDA) == LOW && ahora - ultimaLecturaIzquierda > debounceDelay) {
+      if (posicionActual > 0) {
+        posicionActual--;
+        Serial.print("Servo Izquierda → Posición: ");
+        Serial.println(posicionActual);
+        ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+      }
+      ultimaLecturaIzquierda = ahora;
+    }
+
+    if (digitalRead(BOTON_DERECHA) == LOW && ahora - ultimaLecturaDerecha > debounceDelay) {
+      if (posicionActual < 4) {
+        posicionActual++;
+        Serial.print("Servo Derecha → Posición: ");
+        Serial.println(posicionActual);
+        ledcWrite(SERVO_CANAL, posiciones[posicionActual]);
+      }
+      ultimaLecturaDerecha = ahora;
+    }
+
+    // Mostrar patrón según posición
+    mostrarPatronServo();
+  } else {
+    // Aplicar PWM normal para LEDs
+    aplicarBrillos();
+  }
+}
